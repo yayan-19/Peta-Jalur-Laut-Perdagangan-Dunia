@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="./resources/ol.css">
+        <link rel="stylesheet" href="resources/fontawesome-all.min.css">
+        <link href="resources/photon-geocoder-autocomplete.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="./resources/ol-layerswitcher.css">
+        <link rel="stylesheet" href="./resources/qgis2web.css">
+        <style>
+        html, body {
+            background-color: #ffffff;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Style Running Text (Marquee) */
+        .running-text-container {
+            background-color: #ff0000; /* Warna merah */
+            color: #ffffff;            /* Warna putih */
+            font-weight: bold;
+            font-size: 16px;
+            padding: 6px 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+
+        #map {
+            width: 100%;
+            flex-grow: 1;
+            padding: 0;
+            margin: 0;
+            position: relative;
+            touch-action: manipulation; /* Meningkatkan responsivitas klik/sentuh di HP */
+        }
+
+        /* Menyembunyikan tulisan qgis2web, OpenLayers, QGIS secara permanen */
+        .ol-attribution, .ol-attribution-uncollapsible {
+            display: none !important;
+        }
+
+        .ol-control > * {
+            background-color: #f8f8f8!important;
+            color: #444444!important;
+            border-radius: 0px;
+        }
+        .ol-attribution a, .gcd-gl-input::placeholder, .search-layer-input-search::placeholder {
+            color: #444444!important;
+        }
+        .search-layer-input-search {
+            background-color: #f8f8f8!important;
+        }
+        .ol-control > *:focus, .ol-control >*:hover {
+            background-color: rgba(248, 248, 248, 0.7)!important;
+        } 
+        .ol-control {
+            background-color: rgba(255,255,255,.4) !important;
+            padding: 2px !important;
+        }
+
+        /* Tombol Home di Bawah Tombol Zoom */
+        .ol-home {
+            top: 65px;
+            left: .5em;
+        }
+        .ol-home button {
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Tampilan Loading Spinner */
+        #loader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-family: sans-serif;
+            font-weight: bold;
+            color: #333;
+        }
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #ff0000;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 12px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        </style>
+        <title>Peta Jalur Laut Perdagangan Dunia</title>
+    </head>
+    <body>
+        <!-- Running Text -->
+        <div class="running-text-container notranslate" translate="no">
+            <marquee behavior="scroll" direction="left" scrollamount="6">
+                PETA JALUR LAUT PERDAGANGAN DUNIA
+            </marquee>
+        </div>
+
+        <div id="map">
+            <!-- Layar Loading -->
+            <div id="loader">
+                <div class="spinner"></div>
+                <div>Memuat Peta...</div>
+            </div>
+
+            <div id="popup" class="ol-popup">
+                <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+                <div id="popup-content"></div>
+            </div>
+        </div>
+
+        <script src="resources/qgis2web_expressions.js"></script>
+        <script src="resources/proj4.js"></script>
+        <script>proj4.defs('EPSG:4326','+proj=longlat +datum=WGS84 +no_defs');</script>
+        <script src="./resources/functions.js"></script>
+        <script src="./resources/ol.js"></script>
+        <script src="./resources/ol-layerswitcher.js"></script>
+        <script src="resources/photon-geocoder-autocomplete.min.js"></script>
+        <script src="resources/olms.js"></script>
+        <script src="layers/JalurlautPerdaganganDunia_1.js"></script>
+        <script src="layers/Chokepoint_2.js"></script>
+        <script src="styles/JalurlautPerdaganganDunia_1_style.js"></script>
+        <script src="styles/Chokepoint_2_style.js"></script>
+        <script src="./layers/layers.js" type="text/javascript"></script> 
+        <script src="./resources/Autolinker.min.js"></script>
+        <script src="./resources/qgis2web.js"></script>
+
+        <script>
+        // Memastikan Peta Selalu Mengarah ke Utara (Rotasi Dinonaktifkan)
+        if (typeof map !== 'undefined' && map.getView()) {
+            map.getView().setProperties({ enableRotation: false });
+            map.getView().setRotation(0);
+        }
+
+        // Menyembunyikan Layar Loading setelah Seluruh Halaman dan Lapisan Selesai Dimuat
+        window.addEventListener('load', function() {
+            var loader = document.getElementById('loader');
+            if (loader) {
+                loader.style.opacity = '0';
+                loader.style.transition = 'opacity 0.5s ease';
+                setTimeout(function() {
+                    loader.style.display = 'none';
+                }, 500);
+            }
+        });
+
+        // Menambahkan Tombol Home Tepat di Bawah Tombol Zoom
+        if (typeof map !== 'undefined') {
+            var initialCenter = map.getView().getCenter();
+            var initialZoom = map.getView().getZoom();
+
+            var homeButton = document.createElement('button');
+            homeButton.innerHTML = '<i class="fas fa-home"></i>';
+            homeButton.title = 'Tampilan Awal';
+
+            homeButton.addEventListener('click', function() {
+                map.getView().animate({
+                    center: initialCenter,
+                    zoom: initialZoom,
+                    duration: 500
+                });
+            });
+
+            var homeElement = document.createElement('div');
+            homeElement.className = 'ol-home ol-unselectable ol-control';
+            homeElement.appendChild(homeButton);
+
+            map.addControl(new ol.control.Control({
+                element: homeElement
+            }));
+        }
+        </script>
+    </body>
+</html>
