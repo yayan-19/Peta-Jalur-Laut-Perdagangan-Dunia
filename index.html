@@ -25,7 +25,7 @@
 
         /* Container Running Text */
         .running-text-container {
-            background-color: #ff0000; /* Background Merah */
+            background-color: #ff0000; /* Latar Merah */
             color: #ffffff;            /* Teks Putih */
             font-weight: bold;
             font-size: 16px;
@@ -43,10 +43,10 @@
             padding: 0;
             margin: 0;
             position: relative;
-            touch-action: manipulation; /* Memperbaiki responsivitas klik/sentuhan di HP */
+            touch-action: manipulation; /* Lebih responsif sentuhan di HP */
         }
 
-        /* Penghapusan Permanen Watermark qgis2web, OpenLayers, & QGIS */
+        /* Menyembunyikan Watermark qgis2web, OpenLayers, & QGIS Permanen */
         .ol-attribution, .ol-attribution-uncollapsible, .bottom-attribution {
             display: none !important;
         }
@@ -70,7 +70,7 @@
             padding: 2px !important;
         }
 
-        /* Posisi Tombol Home di Bawah Tombol Zoom */
+        /* Posisi Tombol Home Tepat di Bawah Tombol Zoom */
         .ol-home {
             top: 65px;
             left: .5em;
@@ -85,7 +85,7 @@
             justify-content: center;
         }
 
-        /* Tampilan Layar Loading */
+        /* Layar Loading */
         #loader-overlay {
             position: absolute;
             top: 0;
@@ -98,7 +98,7 @@
             justify-content: center;
             align-items: center;
             flex-direction: column;
-            font-family: Arial, sans-serif;
+            font-family: sans-serif;
             font-weight: bold;
             color: #333333;
         }
@@ -119,7 +119,7 @@
         <title>Peta Jalur Laut Perdagangan Dunia</title>
     </head>
     <body>
-        <!-- Running Text (Tidak Diterjemahkan Oleh Google Translate) -->
+        <!-- Running Text (Anti Google Translate) -->
         <div class="running-text-container notranslate" translate="no">
             <marquee behavior="scroll" direction="left" scrollamount="6">
                 PETA JALUR LAUT PERDAGANGAN DUNIA
@@ -127,7 +127,7 @@
         </div>
 
         <div id="map">
-            <!-- Layar Loading -->
+            <!-- Layar Loading Spinner -->
             <div id="loader-overlay">
                 <div class="spinner"></div>
                 <div>Memuat Peta...</div>
@@ -156,13 +156,21 @@
         <script src="./resources/qgis2web.js"></script>
 
         <script>
-        // 1. Kunci Rotasi Peta Agar Selalu Mengarah ke Utara
+        // 1. KUNCI ROTASI PETA (Mencegah diputar di HP & PC)
         if (typeof map !== 'undefined' && map.getView()) {
-            map.getView().setProperties({ enableRotation: false });
-            map.getView().setRotation(0);
+            var view = map.getView();
+            view.setRotation(0); // Kembalikan ke posisi lurus Utara
+            
+            // Nonaktifkan interaksi rotasi dengan gesture dua jari di HP dan tombol Keyboard/Mouse
+            map.getInteractions().forEach(function(interaction) {
+                if (interaction instanceof ol.interaction.PinchRotate || 
+                    interaction instanceof ol.interaction.DragRotate) {
+                    map.removeInteraction(interaction);
+                }
+            });
         }
 
-        // 2. Menyembunyikan Layar Loading Saat Peta Selesai Dimuat
+        // 2. Hilangkan Layar Loading
         window.addEventListener('load', function() {
             var loader = document.getElementById('loader-overlay');
             if (loader) {
@@ -174,7 +182,7 @@
             }
         });
 
-        // 3. Menambahkan Tombol Home Tepat Di Bawah Tombol Zoom
+        // 3. Tambahkan Tombol Home di Bawah Zoom
         if (typeof map !== 'undefined') {
             var initialCenter = map.getView().getCenter();
             var initialZoom = map.getView().getZoom();
@@ -188,6 +196,7 @@
                 map.getView().animate({
                     center: initialCenter,
                     zoom: initialZoom,
+                    rotation: 0, // Pastikan posisi tetap lurus saat klik Home
                     duration: 500
                 });
             });
